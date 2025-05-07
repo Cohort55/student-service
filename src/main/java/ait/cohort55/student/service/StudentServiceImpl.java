@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.StreamSupport;
 
 @Component
 public class StudentServiceImpl implements StudentService {
@@ -36,31 +37,49 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public StudentDto removeStudent(Long id) {
-        return null;
+        Student student = studentRepository.findById(id).orElseThrow(StudentNotFoundException::new);
+        studentRepository.deleteById(id);
+        return new StudentDto(id, student.getName(), student.getScores());
     }
 
     @Override
     public StudentAddDto updateStudent(Long id, StudentUpdateDto studentUpdateDto) {
-        return null;
+        Student student = studentRepository.findById(id).orElseThrow(StudentNotFoundException::new);
+        if (studentUpdateDto.getName() != null) {
+            student.setName(studentUpdateDto.getName());
+        }
+        if (studentUpdateDto.getPassword() != null) {
+            student.setPassword(studentUpdateDto.getPassword());
+        }
+        return new StudentAddDto(student.getId(), student.getName(), student.getPassword());
     }
 
     @Override
     public Boolean addScore(Long id, ScoreDto scoreDto) {
-        return null;
+        Student student = studentRepository.findById(id).orElseThrow(StudentNotFoundException::new);
+        return student.addScore(scoreDto.getExamName(), scoreDto.getScore());
     }
 
     @Override
     public List<StudentDto> findStudentsByName(String name) {
-        return List.of();
+        return StreamSupport.stream(studentRepository.findAll().spliterator(), false)
+                .filter(s -> name.equalsIgnoreCase(s.getName()))
+                .map(s -> new StudentDto(s.getId(), s.getName(), s.getScores()))
+                .toList();
     }
 
     @Override
     public Long getStudentsQuantityByNames(Set<String> names) {
-        return 0L;
+        return StreamSupport.stream(studentRepository.findAll().spliterator(), false)
+                .filter(s -> names.contains(s.getName()))
+                .count();
     }
 
     @Override
     public List<StudentDto> findStudentsByExamNameMinScore(String exam, Integer minScore) {
-        return List.of();
+        return StreamSupport.stream(studentRepository.findAll().spliterator(), false)
+                .filter(s -> s.getScores().containsKey(exam) && s.getScores().get(exam) > minScore)
+                .map(s -> new StudentDto(s.getId(), s.getName(), s.getScores()))
+                .toList();
     }
 }
